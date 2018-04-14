@@ -2,7 +2,9 @@ package com.example.refreshrecyclerview.base;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.support.v4.view.MotionEventCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -83,6 +85,7 @@ public abstract class RefreshLayoutBase<T extends View> extends ViewGroup implem
         mScroller = new Scroller(context);
         mScreenHeight = context.getResources().getDisplayMetrics().heightPixels;
         mHeaderHeight = mScreenHeight / 4;
+        Log.e("RefreshLayoutBase","mHeaderHeight:"+mHeaderHeight);
         initLayout(context);
     }
 
@@ -110,13 +113,14 @@ public abstract class RefreshLayoutBase<T extends View> extends ViewGroup implem
         }
         mInitScrollY = mHeaderView.getMeasuredHeight() + getPaddingTop();
         scrollTo(0, mInitScrollY);
+//        Log.e("RefreshLayoutBase","mInitScrollY:"+mInitScrollY);
     }
 
 
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        final int action = ev.getAction();
+        final int action = MotionEventCompat.getActionMasked(ev);
         if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
             return false;
         }
@@ -150,6 +154,7 @@ public abstract class RefreshLayoutBase<T extends View> extends ViewGroup implem
                 mLastY = currentY;
                 break;
             case MotionEvent.ACTION_UP:
+                Log.e("RefreshLayoutBase","MotionEvent.ACTION_UP");
                 doRefresh();
                 break;
             default:
@@ -169,6 +174,14 @@ public abstract class RefreshLayoutBase<T extends View> extends ViewGroup implem
     @Override
     public void onScrollStateChanged(AbsListView view, int scrollState) {
 
+    }
+
+    @Override
+    public void computeScroll() {
+        if (mScroller.computeScrollOffset()) {
+            scrollTo(mScroller.getCurrX(), mScroller.getCurrY());
+            postInvalidate();
+        }
     }
 
     private void doLoadMore() {
@@ -223,6 +236,7 @@ public abstract class RefreshLayoutBase<T extends View> extends ViewGroup implem
     private void changeHeaderViewStaus() {
         int curScrollY = getScrollY();
         if (curScrollY < mInitScrollY / 2) {
+            Log.e("RefreshLayoutBase","changeHeaderViewStaus()+refreshing"+curScrollY);
             mScroller.startScroll(getScrollX(), curScrollY, 0, mHeaderView.getPaddingTop() - curScrollY);
             mCurrentStatus = STATUS_REFRESHING;
             mTipsTextView.setText(R.string.pull_to_refresh_refreshing_label);
@@ -230,11 +244,14 @@ public abstract class RefreshLayoutBase<T extends View> extends ViewGroup implem
             mArrowImageView.setVisibility(GONE);
             mProgressBar.setVisibility(VISIBLE);
         } else {
+            Log.e("RefreshLayoutBase","changeHeaderViewStaus()+notrefresh"+curScrollY);
             mScroller.startScroll(getScrollX(), curScrollY, 0, mInitScrollY - curScrollY);
             mCurrentStatus = STATUS_IDLE;
         }
         invalidate();
     }
+
+
 
     private void changeTips() {
         if (mCurrentStatus == STATUS_PULL_TO_REFRESH) {
